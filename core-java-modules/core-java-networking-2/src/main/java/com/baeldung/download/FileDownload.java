@@ -1,9 +1,16 @@
 package com.baeldung.download;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.asynchttpclient.*;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -17,30 +24,30 @@ public class FileDownload {
 
     public static void downloadWithJavaIO(String url, String localFilename) {
 
-        try (BufferedInputStream in = new BufferedInputStream(new URL(url).openStream()); FileOutputStream fileOutputStream = new FileOutputStream(localFilename)) {
+        try (BufferedInputStream in = new BufferedInputStream(new URI(url).toURL().openStream()); FileOutputStream fileOutputStream = new FileOutputStream(localFilename)) {
 
             byte dataBuffer[] = new byte[1024];
             int bytesRead;
             while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
                 fileOutputStream.write(dataBuffer, 0, bytesRead);
             }
-        } catch (IOException e) {
+        } catch (IOException |URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
     public static void downloadWithJava7IO(String url, String localFilename) {
 
-        try (InputStream in = new URL(url).openStream()) {
+        try (InputStream in = new URI(url).toURL().openStream()) {
             Files.copy(in, Paths.get(localFilename), StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
-    public static void downloadWithJavaNIO(String fileURL, String localFilename) throws IOException {
+    public static void downloadWithJavaNIO(String fileURL, String localFilename) throws IOException, URISyntaxException {
 
-        URL url = new URL(fileURL);
+        URL url = new URI(fileURL).toURL();
         try (ReadableByteChannel readableByteChannel = Channels.newChannel(url.openStream()); 
             FileOutputStream fileOutputStream = new FileOutputStream(localFilename); FileChannel fileChannel = fileOutputStream.getChannel()) {
 
@@ -54,8 +61,8 @@ public class FileDownload {
         int CONNECT_TIMEOUT = 10000;
         int READ_TIMEOUT = 10000;
         try {
-            FileUtils.copyURLToFile(new URL(url), new File(localFilename), CONNECT_TIMEOUT, READ_TIMEOUT);
-        } catch (IOException e) {
+            FileUtils.copyURLToFile(new URI(url).toURL(), new File(localFilename), CONNECT_TIMEOUT, READ_TIMEOUT);
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
 
@@ -85,6 +92,30 @@ public class FileDownload {
 
         stream.getChannel().close();
         client.close();
+    }
+
+    public static void downloadWithApacheHttpClient(String url, String localFileName) throws IOException {
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet httpGet = new HttpGet(url);
+            httpClient.execute(httpGet, classicHttpResponse -> {
+                int code = classicHttpResponse.getCode();
+                if (code == 200) {
+                    HttpEntity entity = classicHttpResponse.getEntity();
+                    if (entity != null) {
+                        try (InputStream inputStream = entity.getContent();
+                        FileOutputStream fileOutputStream = new FileOutputStream(localFileName)) {
+                            byte[] dataBuffer = new byte[1024];
+                            int bytesRead;
+                            while((bytesRead = inputStream.read(dataBuffer)) != -1) {
+                                fileOutputStream.write(dataBuffer, 0, bytesRead);
+                            }
+                        }
+                    }
+                    EntityUtils.consume(entity);
+                }
+                return classicHttpResponse;
+            });
+        }
     }
 
 }

@@ -30,7 +30,7 @@ public class FileDownloadIntegrationTest {
     }
     
     @Test
-    public void givenJavaNIO_whenDownloadingFile_thenDownloadShouldBeCorrect() throws NoSuchAlgorithmException, IOException {
+    public void givenJavaNIO_whenDownloadingFile_thenDownloadShouldBeCorrect() throws NoSuchAlgorithmException, IOException, URISyntaxException {
         
         FileDownload.downloadWithJavaNIO(FILE_URL, FILE_NAME);
         assertTrue(checkMd5Hash(FILE_NAME));
@@ -54,6 +54,12 @@ public class FileDownloadIntegrationTest {
     public void givenApacheCommonsIO_whenDownloadingFile_thenDownloadShouldBeCorrect() throws NoSuchAlgorithmException, IOException {
         
         FileDownload.downloadWithApacheCommons(FILE_URL, FILE_NAME);
+        assertTrue(checkMd5Hash(FILE_NAME));
+    }
+
+    @Test
+    public void giveApacheHttpClient_whenDownloadingFile_thenDownloadShouldBeCorrect() throws IOException, NoSuchAlgorithmException {
+        FileDownload.downloadWithApacheHttpClient(FILE_URL, FILE_NAME);
         assertTrue(checkMd5Hash(FILE_NAME));
     }
     
